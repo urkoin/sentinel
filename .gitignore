@@ -93,7 +93,7 @@ ENV/
 # OS specific and other
 .DS_Store
 docs/.DS_Store
-.keep
+#.keep
 
 # ignore everything in ignore/
 ignore/
