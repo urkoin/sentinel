@@ -1,2 +1,2 @@
-# run Allcoinguru-Sentinel every two minutes
-*/2 * * * * cd /home/YOURUSERNAME/sentinel && ./venv/bin/python bin/sentinel.py >/dev/null 2>&1
+# run Germancc-Sentinel every two minutes
+*/2 * * * * cd /home/ivan/sentinel && ./venv/bin/python bin/sentinel.py >/dev/null 2>&1

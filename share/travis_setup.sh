@@ -1,9 +1,9 @@
 #!/bin/bash
 set -evx
 
-mkdir ~/.allcoingurucore
+mkdir ~/.germancccore
 
 # safety check
-if [ ! -f ~/.allcoingurucore/.allcoinguru.conf ]; then
-  cp share/allcoinguru.conf.example ~/.allcoingurucore/allcoinguru.conf
+if [ ! -f ~/.germancccore/.germancc.conf ]; then
+  cp share/germancc.conf.example ~/.germancccore/germancc.conf
 fi

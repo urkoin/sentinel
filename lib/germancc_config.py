@@ -7,11 +7,11 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'lib'))
 from misc import printdbg
 
 
-class AllcoinguruConfig():
+class GermanccConfig():
 
     @classmethod
     def slurp_config_file(self, filename):
-        # read allcoinguru.conf config but skip commented lines
+        # read germancc.conf config but skip commented lines
         f = io.open(filename)
         lines = []
         for line in f:
@@ -20,27 +20,27 @@ class AllcoinguruConfig():
             lines.append(line)
         f.close()
 
-        # data is allcoinguru.conf without commented lines
+        # data is germancc.conf without commented lines
         data = ''.join(lines)
 
         return data
 
     @classmethod
     def get_rpc_creds(self, data, network='mainnet'):
-        # get rpc info from allcoinguru.conf
+        # get rpc info from germancc.conf
         match = re.findall(r'rpc(user|password|port)=(.*?)$', data, re.MULTILINE)
 
         # python >= 2.7
         creds = {key: value for (key, value) in match}
 
-        # standard Allcoinguru defaults...
-        default_port = 10771 if (network == 'mainnet') else 10871
+        # standard Germancc defaults...
+        default_port = 9966 if (network == 'mainnet') else 10871
 
-        # use default port for network if not specified in allcoinguru.conf
+        # use default port for network if not specified in germancc.conf
         if not ('port' in creds):
             creds[u'port'] = default_port
 
-        # convert to an int if taken from allcoinguru.conf
+        # convert to an int if taken from germancc.conf
         creds[u'port'] = int(creds[u'port'])
 
         # return a dictionary with RPC credential key, value pairs

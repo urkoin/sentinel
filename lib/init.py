@@ -57,23 +57,23 @@ def is_database_correctly_configured():
     return configured
 
 
-def has_allcoinguru_conf():
+def has_germancc_conf():
     import config
     import io
 
-    valid_allcoinguru_conf = False
+    valid_germancc_conf = False
 
-    # ensure allcoinguru_conf exists & readable
+    # ensure germancc_conf exists & readable
     #
-    # if not, print a message stating that Allcoinguru Core must be installed and
-    # configured, including JSONRPC access in allcoinguru.conf
+    # if not, print a message stating that Germancc Core must be installed and
+    # configured, including JSONRPC access in germancc.conf
     try:
-        f = io.open(config.allcoinguru_conf)
-        valid_allcoinguru_conf = True
+        f = io.open(config.germancc_conf)
+        valid_germancc_conf = True
     except IOError as e:
         print(e)
 
-    return valid_allcoinguru_conf
+    return valid_germancc_conf
 
 
 # === begin main
@@ -95,8 +95,8 @@ def main():
         print("Please ensure correct database configuration.")
         sys.exit(1)
 
-    if not has_allcoinguru_conf():
-        print("AllcoinguruCore must be installed and configured, including JSONRPC access in allcoinguru.conf")
+    if not has_germancc_conf():
+        print("GermanccCore must be installed and configured, including JSONRPC access in germancc.conf")
         sys.exit(1)
 
 

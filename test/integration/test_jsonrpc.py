@@ -8,12 +8,12 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'lib'))
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 import config
 
-from allcoingurud import AllcoinguruDaemon
-from allcoinguru_config import AllcoinguruConfig
+from germanccd import GermanccDaemon
+from germancc_config import GermanccConfig
 
 
-def test_allcoingurud():
-    config_text = AllcoinguruConfig.slurp_config_file(config.allcoinguru_conf)
+def test_germanccd():
+    config_text = GermanccConfig.slurp_config_file(config.germancc_conf)
     network = 'mainnet'
     is_testnet = False
     genesis_hash = u'00000ffd590b1485b3caadc19b22e6379c733355108f107a430458cdf3407ab6'
@@ -23,15 +23,15 @@ def test_allcoingurud():
             is_testnet = True
             genesis_hash = u'00000bafbc94add76cb75e2ec92894837288a481e5c005f6563d91623bf8bc2c'
 
-    creds = AllcoinguruConfig.get_rpc_creds(config_text, network)
-    allcoingurud = AllcoinguruDaemon(**creds)
-    assert allcoingurud.rpc_command is not None
+    creds = GermanccConfig.get_rpc_creds(config_text, network)
+    germanccd = GermanccDaemon(**creds)
+    assert germanccd.rpc_command is not None
 
-    assert hasattr(allcoingurud, 'rpc_connection')
+    assert hasattr(germanccd, 'rpc_connection')
 
-    # Allcoinguru testnet block 0 hash == 00000bafbc94add76cb75e2ec92894837288a481e5c005f6563d91623bf8bc2c
+    # Germancc testnet block 0 hash == 00000bafbc94add76cb75e2ec92894837288a481e5c005f6563d91623bf8bc2c
     # test commands without arguments
-    info = allcoingurud.rpc_command('getinfo')
+    info = germanccd.rpc_command('getinfo')
     info_keys = [
         'blocks',
         'connections',
@@ -48,4 +48,4 @@ def test_allcoingurud():
     assert info['testnet'] is is_testnet
 
     # test commands with args
-    assert allcoingurud.rpc_command('getblockhash', 0) == genesis_hash
+    assert germanccd.rpc_command('getblockhash', 0) == genesis_hash

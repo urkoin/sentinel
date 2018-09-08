@@ -6,13 +6,13 @@ os.environ['SENTINEL_CONFIG'] = os.path.normpath(os.path.join(os.path.dirname(__
 os.environ['SENTINEL_ENV'] = 'test'
 sys.path.append(os.path.normpath(os.path.join(os.path.dirname(__file__), '../../lib')))
 import config
-from allcoinguru_config import AllcoinguruConfig
+from germancc_config import GermanccConfig
 
 
 @pytest.fixture
-def allcoinguru_conf(**kwargs):
+def germancc_conf(**kwargs):
     defaults = {
-        'rpcuser': 'allcoingururpc',
+        'rpcuser': 'germanccrpc',
         'rpcpassword': 'EwJeV3fZTyTVozdECF627BkBMnNDwQaVLakG3A4wXYyk',
         'rpcport': 29241,
     }
@@ -34,35 +34,35 @@ rpcport={rpcport}
 
 
 def test_get_rpc_creds():
-    allcoinguru_config = allcoinguru_conf()
-    creds = AllcoinguruConfig.get_rpc_creds(allcoinguru_config, 'testnet')
+    germancc_config = germancc_conf()
+    creds = GermanccConfig.get_rpc_creds(germancc_config, 'testnet')
 
     for key in ('user', 'password', 'port'):
         assert key in creds
-    assert creds.get('user') == 'allcoingururpc'
+    assert creds.get('user') == 'germanccrpc'
     assert creds.get('password') == 'EwJeV3fZTyTVozdECF627BkBMnNDwQaVLakG3A4wXYyk'
     assert creds.get('port') == 76761
 
-    allcoinguru_config = allcoinguru_conf(rpcpassword='s00pers33kr1t', rpcport=76761)
-    creds = AllcoinguruConfig.get_rpc_creds(allcoinguru_config, 'testnet')
+    germancc_config = germancc_conf(rpcpassword='s00pers33kr1t', rpcport=76761)
+    creds = GermanccConfig.get_rpc_creds(germancc_config, 'testnet')
 
     for key in ('user', 'password', 'port'):
         assert key in creds
-    assert creds.get('user') == 'allcoingururpc'
+    assert creds.get('user') == 'germanccrpc'
     assert creds.get('password') == 's00pers33kr1t'
     assert creds.get('port') == 76761
 
-    no_port_specified = re.sub('\nrpcport=.*?\n', '\n', allcoinguru_conf(), re.M)
-    creds = AllcoinguruConfig.get_rpc_creds(no_port_specified, 'testnet')
+    no_port_specified = re.sub('\nrpcport=.*?\n', '\n', germancc_conf(), re.M)
+    creds = GermanccConfig.get_rpc_creds(no_port_specified, 'testnet')
 
     for key in ('user', 'password', 'port'):
         assert key in creds
-    assert creds.get('user') == 'allcoingururpc'
+    assert creds.get('user') == 'germanccrpc'
     assert creds.get('password') == 'EwJeV3fZTyTVozdECF627BkBMnNDwQaVLakG3A4wXYyk'
     assert creds.get('port') == 76761
 
 
-# ensure allcoinguru network (mainnet, testnet) matches that specified in config
-# requires running allcoingurud on whatever port specified...
+# ensure germancc network (mainnet, testnet) matches that specified in config
+# requires running germanccd on whatever port specified...
 #
-# This is more of a allcoingurud/jsonrpc test than a config test...
+# This is more of a germanccd/jsonrpc test than a config test...

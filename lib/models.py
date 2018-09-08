@@ -12,7 +12,7 @@ from peewee import IntegerField, CharField, TextField, ForeignKeyField, DecimalF
 import peewee
 import playhouse.signals
 import misc
-import allcoingurud
+import germanccd
 from misc import (printdbg, is_numeric)
 import config
 from bitcoinrpc.authproxy import JSONRPCException
@@ -72,10 +72,10 @@ class GovernanceObject(BaseModel):
     class Meta:
         db_table = 'governance_objects'
 
-    # sync allcoingurud gobject list with our local relational DB backend
+    # sync germanccd gobject list with our local relational DB backend
     @classmethod
-    def sync(self, allcoingurud):
-        golist = allcoingurud.rpc_command('gobject', 'list')
+    def sync(self, germanccd):
+        golist = germanccd.rpc_command('gobject', 'list')
 
         # objects which are removed from the network should be removed from the DB
         try:
@@ -84,7 +84,7 @@ class GovernanceObject(BaseModel):
                 purged.delete_instance(recursive=True, delete_nullable=True)
 
             for item in golist.values():
-                (go, subobj) = self.import_gobject_from_allcoingurud(allcoingurud, item)
+                (go, subobj) = self.import_gobject_from_germanccd(germanccd, item)
         except Exception as e:
             printdbg("Got an error upon import: %s" % e)
 
@@ -96,9 +96,9 @@ class GovernanceObject(BaseModel):
         return query
 
     @classmethod
-    def import_gobject_from_allcoingurud(self, allcoingurud, rec):
+    def import_gobject_from_germanccd(self, germanccd, rec):
         import decimal
-        import allcoingurulib
+        import germancclib
         import inflection
 
         object_hex = rec['DataHex']
@@ -113,9 +113,9 @@ class GovernanceObject(BaseModel):
             'no_count': rec['NoCount'],
         }
 
-        # shim/allcoingurud conversion
-        object_hex = allcoingurulib.SHIM_deserialise_from_allcoingurud(object_hex)
-        objects = allcoingurulib.deserialise(object_hex)
+        # shim/germanccd conversion
+        object_hex = germancclib.SHIM_deserialise_from_germanccd(object_hex)
+        objects = germancclib.deserialise(object_hex)
         subobj = None
 
         obj_type, dikt = objects[0:2:1]
@@ -125,11 +125,11 @@ class GovernanceObject(BaseModel):
         # set object_type in govobj table
         gobj_dict['object_type'] = subclass.govobj_type
 
-        # exclude any invalid model data from allcoingurud...
+        # exclude any invalid model data from germanccd...
         valid_keys = subclass.serialisable_fields()
         subdikt = {k: dikt[k] for k in valid_keys if k in dikt}
 
-        # get/create, then sync vote counts from allcoingurud, with every run
+        # get/create, then sync vote counts from germanccd, with every run
         govobj, created = self.get_or_create(object_hash=object_hash, defaults=gobj_dict)
         if created:
             printdbg("govobj created = %s" % created)
@@ -138,19 +138,19 @@ class GovernanceObject(BaseModel):
             printdbg("govobj updated = %d" % count)
         subdikt['governance_object'] = govobj
 
-        # get/create, then sync payment amounts, etc. from allcoingurud - Allcoingurud is the master
+        # get/create, then sync payment amounts, etc. from germanccd - Germanccd is the master
         try:
             newdikt = subdikt.copy()
             newdikt['object_hash'] = object_hash
             if subclass(**newdikt).is_valid() is False:
-                govobj.vote_delete(allcoingurud)
+                govobj.vote_delete(germanccd)
                 return (govobj, None)
 
             subobj, created = subclass.get_or_create(object_hash=object_hash, defaults=subdikt)
         except Exception as e:
             # in this case, vote as delete, and log the vote in the DB
-            printdbg("Got invalid object from allcoingurud! %s" % e)
-            govobj.vote_delete(allcoingurud)
+            printdbg("Got invalid object from germanccd! %s" % e)
+            govobj.vote_delete(germanccd)
             return (govobj, None)
 
         if created:
@@ -162,9 +162,9 @@ class GovernanceObject(BaseModel):
         # ATM, returns a tuple w/gov attributes and the govobj
         return (govobj, subobj)
 
-    def vote_delete(self, allcoingurud):
+    def vote_delete(self, germanccd):
         if not self.voted_on(signal=VoteSignals.delete, outcome=VoteOutcomes.yes):
-            self.vote(allcoingurud, VoteSignals.delete, VoteOutcomes.yes)
+            self.vote(germanccd, VoteSignals.delete, VoteOutcomes.yes)
         return
 
     def get_vote_command(self, signal, outcome):
@@ -172,8 +172,8 @@ class GovernanceObject(BaseModel):
                signal.name, outcome.name]
         return cmd
 
-    def vote(self, allcoingurud, signal, outcome):
-        import allcoingurulib
+    def vote(self, germanccd, signal, outcome):
+        import germancclib
 
         # At this point, will probably never reach here. But doesn't hurt to
         # have an extra check just in case objects get out of sync (people will
@@ -203,10 +203,10 @@ class GovernanceObject(BaseModel):
 
         vote_command = self.get_vote_command(signal, outcome)
         printdbg(' '.join(vote_command))
-        output = allcoingurud.rpc_command(*vote_command)
+        output = germanccd.rpc_command(*vote_command)
 
         # extract vote output parsing to external lib
-        voted = allcoingurulib.did_we_vote(output)
+        voted = germancclib.did_we_vote(output)
 
         if voted:
             printdbg('VOTE success, saving Vote object to database')
@@ -214,11 +214,11 @@ class GovernanceObject(BaseModel):
                  object_hash=self.object_hash).save()
         else:
             printdbg('VOTE failed, trying to sync with network vote')
-            self.sync_network_vote(allcoingurud, signal)
+            self.sync_network_vote(germanccd, signal)
 
-    def sync_network_vote(self, allcoingurud, signal):
+    def sync_network_vote(self, germanccd, signal):
         printdbg('\tsyncing network vote for object %s with signal %s' % (self.object_hash, signal.name))
-        vote_info = allcoingurud.get_my_gobject_votes(self.object_hash)
+        vote_info = germanccd.get_my_gobject_votes(self.object_hash)
         for vdikt in vote_info:
             if vdikt['signal'] != signal.name:
                 continue
@@ -274,7 +274,7 @@ class Proposal(GovernanceClass, BaseModel):
         db_table = 'proposals'
 
     def is_valid(self):
-        import allcoingurulib
+        import germancclib
 
         printdbg("In Proposal#is_valid, for Proposal: %s" % self.__dict__)
 
@@ -304,9 +304,9 @@ class Proposal(GovernanceClass, BaseModel):
                 printdbg("\tProposal amount [%s] is negative or zero, returning False" % self.payment_amount)
                 return False
 
-            # payment address is valid base58 allcoinguru addr, non-multisig
-            if not allcoingurulib.is_valid_allcoinguru_address(self.payment_address, config.network):
-                printdbg("\tPayment address [%s] not a valid Allcoinguru address for network [%s], returning False" % (self.payment_address, config.network))
+            # payment address is valid base58 germancc addr, non-multisig
+            if not germancclib.is_valid_germancc_address(self.payment_address, config.network):
+                printdbg("\tPayment address [%s] not a valid Germancc address for network [%s], returning False" % (self.payment_address, config.network))
                 return False
 
             # URL
@@ -329,7 +329,7 @@ class Proposal(GovernanceClass, BaseModel):
 
     def is_expired(self, superblockcycle=None):
         from constants import SUPERBLOCK_FUDGE_WINDOW
-        import allcoingurulib
+        import germancclib
 
         if not superblockcycle:
             raise Exception("Required field superblockcycle missing.")
@@ -341,7 +341,7 @@ class Proposal(GovernanceClass, BaseModel):
         # half the SB cycle, converted to seconds
         # add the fudge_window in seconds, defined elsewhere in Sentinel
         expiration_window_seconds = int(
-            (allcoingurulib.blocks_to_seconds(superblockcycle) / 2) +
+            (germancclib.blocks_to_seconds(superblockcycle) / 2) +
             SUPERBLOCK_FUDGE_WINDOW
         )
         printdbg("\texpiration_window_seconds = %s" % expiration_window_seconds)
@@ -364,7 +364,7 @@ class Proposal(GovernanceClass, BaseModel):
         if (self.end_epoch < (misc.now() - thirty_days)):
             return True
 
-        # TBD (item moved to external storage/AllcoinguruDrive, etc.)
+        # TBD (item moved to external storage/GermanccDrive, etc.)
         return False
 
     @classmethod
@@ -409,17 +409,17 @@ class Proposal(GovernanceClass, BaseModel):
             return rank
 
     def get_prepare_command(self):
-        import allcoingurulib
-        obj_data = allcoingurulib.SHIM_serialise_for_allcoingurud(self.serialise())
+        import germancclib
+        obj_data = germancclib.SHIM_serialise_for_germanccd(self.serialise())
 
         # new superblocks won't have parent_hash, revision, etc...
         cmd = ['gobject', 'prepare', '0', '1', str(int(time.time())), obj_data]
 
         return cmd
 
-    def prepare(self, allcoingurud):
+    def prepare(self, germanccd):
         try:
-            object_hash = allcoingurud.rpc_command(*self.get_prepare_command())
+            object_hash = germanccd.rpc_command(*self.get_prepare_command())
             printdbg("Submitted: [%s]" % object_hash)
             self.go.object_fee_tx = object_hash
             self.go.save()
@@ -447,7 +447,7 @@ class Superblock(BaseModel, GovernanceClass):
         db_table = 'superblocks'
 
     def is_valid(self):
-        import allcoingurulib
+        import germancclib
         import decimal
 
         printdbg("In Superblock#is_valid, for SB: %s" % self.__dict__)
@@ -455,7 +455,7 @@ class Superblock(BaseModel, GovernanceClass):
         # it's a string from the DB...
         addresses = self.payment_addresses.split('|')
         for addr in addresses:
-            if not allcoingurulib.is_valid_allcoinguru_address(addr, config.network):
+            if not germancclib.is_valid_germancc_address(addr, config.network):
                 printdbg("\tInvalid address [%s], returning False" % addr)
                 return False
 
@@ -489,12 +489,12 @@ class Superblock(BaseModel, GovernanceClass):
 
     def is_deletable(self):
         # end_date < (current_date - 30 days)
-        # TBD (item moved to external storage/AllcoinguruDrive, etc.)
+        # TBD (item moved to external storage/GermanccDrive, etc.)
         pass
 
     def hash(self):
-        import allcoingurulib
-        return allcoingurulib.hashit(self.serialise())
+        import germancclib
+        return germancclib.hashit(self.serialise())
 
     def hex_hash(self):
         return "%x" % self.hash()
@@ -604,33 +604,33 @@ class Watchdog(BaseModel, GovernanceClass):
     only_masternode_can_submit = True
 
     @classmethod
-    def active(self, allcoingurud):
+    def active(self, germanccd):
         now = int(time.time())
         resultset = self.select().where(
-            self.created_at >= (now - allcoingurud.SENTINEL_WATCHDOG_MAX_SECONDS)
+            self.created_at >= (now - germanccd.SENTINEL_WATCHDOG_MAX_SECONDS)
         )
         return resultset
 
     @classmethod
-    def expired(self, allcoingurud):
+    def expired(self, germanccd):
         now = int(time.time())
         resultset = self.select().where(
-            self.created_at < (now - allcoingurud.SENTINEL_WATCHDOG_MAX_SECONDS)
+            self.created_at < (now - germanccd.SENTINEL_WATCHDOG_MAX_SECONDS)
         )
         return resultset
 
-    def is_expired(self, allcoingurud):
+    def is_expired(self, germanccd):
         now = int(time.time())
-        return (self.created_at < (now - allcoingurud.SENTINEL_WATCHDOG_MAX_SECONDS))
+        return (self.created_at < (now - germanccd.SENTINEL_WATCHDOG_MAX_SECONDS))
 
-    def is_valid(self, allcoingurud):
-        if self.is_expired(allcoingurud):
+    def is_valid(self, germanccd):
+        if self.is_expired(germanccd):
             return False
 
         return True
 
-    def is_deletable(self, allcoingurud):
-        if self.is_expired(allcoingurud):
+    def is_deletable(self, germanccd):
+        if self.is_expired(germanccd):
             return True
 
         return False
